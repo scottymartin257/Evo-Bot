@@ -529,7 +529,7 @@ export async function registerCommands(
             );
 
         if (moveAllCommand) {
-            logger.info(
+            logger.warn(
                 '✅ /moveall IS included in registration payload'
             );
         } else {
