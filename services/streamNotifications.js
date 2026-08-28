@@ -1,4 +1,4 @@
-import { logger } from "../utils/logger.js";
+import { logger } from "../src/utils/logger.js";
 
 let twitchWasLive = false;
 let twitchAccessToken = null;
