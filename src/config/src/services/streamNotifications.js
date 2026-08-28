@@ -1,105 +1,191 @@
 import { logger } from "../utils/logger.js";
 
 let twitchWasLive = false;
+let twitchAccessToken = null;
+let twitchTokenExpiresAt = 0;
 
 async function getTwitchAccessToken(clientId, clientSecret) {
+  if (
+    twitchAccessToken &&
+    Date.now() < twitchTokenExpiresAt - 60000
+  ) {
+    return twitchAccessToken;
+  }
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: "client_credentials",
+  });
+
   const response = await fetch(
-    `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`,
+    `https://id.twitch.tv/oauth2/token?${params.toString()}`,
     {
       method: "POST",
     }
   );
 
   if (!response.ok) {
-    throw new Error(`Twitch auth failed: ${response.status}`);
+    const text = await response.text();
+
+    throw new Error(
+      `Twitch authentication failed (${response.status}): ${text}`
+    );
   }
 
   const data = await response.json();
-  return data.access_token;
+
+  twitchAccessToken = data.access_token;
+  twitchTokenExpiresAt =
+    Date.now() + data.expires_in * 1000;
+
+  return twitchAccessToken;
+}
+
+async function sendTwitchLiveNotification(
+  client,
+  streamConfig,
+  stream
+) {
+  const discordConfig = streamConfig.discord;
+
+  if (!discordConfig?.channelId) {
+    logger.warn(
+      "Twitch notification channel is not configured."
+    );
+    return;
+  }
+
+  const channel = await client.channels.fetch(
+    discordConfig.channelId
+  );
+
+  if (!channel?.isTextBased()) {
+    logger.warn(
+      `Twitch notification channel ${discordConfig.channelId} is not a text channel.`
+    );
+    return;
+  }
+
+  const username = streamConfig.twitch.username;
+
+  const roleMention = discordConfig.roleId
+    ? `<@&${discordConfig.roleId}>`
+    : "";
+
+  const game = stream.game_name
+    ? `\n🎮 **Playing:** ${stream.game_name}`
+    : "";
+
+  const title = stream.title
+    ? `\n📺 **${stream.title}**`
+    : "";
+
+  await channel.send({
+    content:
+      `${roleMention}\n` +
+      `🔴 **${username} is LIVE on Twitch!**` +
+      `${title}` +
+      `${game}\n\n` +
+      `https://www.twitch.tv/${username}`,
+  });
+
+  logger.info(
+    `✅ Twitch LIVE notification sent for ${username}`
+  );
 }
 
 async function checkTwitch(client, config) {
-  const streamConfig = config.bot.streamNotifications;
+  const streamConfig =
+    config.bot?.streamNotifications;
 
-  if (!streamConfig?.enabled) return;
-  if (!streamConfig.twitch?.enabled) return;
+  if (!streamConfig?.enabled) {
+    return;
+  }
 
-  const {
-    username,
-    clientId,
-    clientSecret,
-  } = streamConfig.twitch;
+  const twitch = streamConfig.twitch;
 
-  if (!clientId || !clientSecret) {
+  if (!twitch?.enabled) {
+    return;
+  }
+
+  if (
+    !twitch.username ||
+    !twitch.clientId ||
+    !twitch.clientSecret
+  ) {
     logger.warn(
-      "Twitch notifications disabled: TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET missing."
+      "Twitch notifications require username, TWITCH_CLIENT_ID, and TWITCH_CLIENT_SECRET."
     );
     return;
   }
 
   try {
-    const accessToken = await getTwitchAccessToken(
-      clientId,
-      clientSecret
+    const token = await getTwitchAccessToken(
+      twitch.clientId,
+      twitch.clientSecret
     );
 
+    const params = new URLSearchParams({
+      user_login: twitch.username,
+    });
+
     const response = await fetch(
-      `https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(username)}`,
+      `https://api.twitch.tv/helix/streams?${params.toString()}`,
       {
         headers: {
-          "Client-ID": clientId,
-          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": twitch.clientId,
+          Authorization: `Bearer ${token}`,
         },
       }
     );
 
     if (!response.ok) {
+      const text = await response.text();
+
       throw new Error(
-        `Twitch stream lookup failed: ${response.status}`
+        `Twitch API error (${response.status}): ${text}`
       );
     }
 
     const data = await response.json();
-    const stream = data.data?.[0];
 
+    const stream = data.data?.[0] ?? null;
     const isLive = Boolean(stream);
 
+    // Offline -> Live
     if (isLive && !twitchWasLive) {
-      const channelId =
-        streamConfig.discord.channelId;
+      await sendTwitchLiveNotification(
+        client,
+        streamConfig,
+        stream
+      );
+    }
 
-      const roleId =
-        streamConfig.discord.roleId;
-
-      const channel =
-        await client.channels.fetch(channelId);
-
-      if (channel) {
-        await channel.send({
-          content:
-            `<@&${roleId}>\n` +
-            `🔴 **${username} is LIVE on Twitch!**\n` +
-            `https://twitch.tv/${username}`,
-        });
-      }
-
+    // Live -> Offline
+    if (!isLive && twitchWasLive) {
       logger.info(
-        `Sent Twitch LIVE notification for ${username}`
+        `${twitch.username} is no longer live on Twitch.`
       );
     }
 
     twitchWasLive = isLive;
   } catch (error) {
     logger.error(
-      "Twitch notification check failed:",
+      "❌ Twitch notification check failed:",
       error
     );
   }
 }
 
-export function startStreamNotifications(client, config) {
+let notificationInterval = null;
+
+export function startStreamNotifications(
+  client,
+  config
+) {
   const streamConfig =
-    config.bot.streamNotifications;
+    config.bot?.streamNotifications;
 
   if (!streamConfig?.enabled) {
     logger.info(
@@ -108,13 +194,33 @@ export function startStreamNotifications(client, config) {
     return;
   }
 
-  logger.info("Starting stream notifications...");
+  if (notificationInterval) {
+    logger.warn(
+      "Stream notification service is already running."
+    );
+    return;
+  }
 
-  // Initial Twitch check
+  logger.info(
+    "🔔 Starting stream notification service..."
+  );
+
+  // Check immediately
   checkTwitch(client, config);
 
-  // Check every 60 seconds
-  setInterval(() => {
+  // Check Twitch every 60 seconds
+  notificationInterval = setInterval(() => {
     checkTwitch(client, config);
   }, 60_000);
+}
+
+export function stopStreamNotifications() {
+  if (notificationInterval) {
+    clearInterval(notificationInterval);
+    notificationInterval = null;
+
+    logger.info(
+      "Stream notification service stopped."
+    );
+  }
 }
