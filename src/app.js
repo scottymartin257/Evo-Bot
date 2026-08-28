@@ -90,13 +90,16 @@ class TitanBot extends Client {
 
       initializeMusic(this);
       
-      startupLog('Logging into Discord...');
-      await this.login(this.config.bot.token);
-      startupLog('Discord login successful');
-      
-      startupLog('Registering slash commands globally...');
-      await this.registerCommands();
-      startupLog('Slash commands registration complete');
+     startupLog('Logging into Discord...');
+await this.login(this.config.bot.token);
+startupLog('Discord login successful');
+
+startupLog('Starting stream notifications...');
+startStreamNotifications(this, this.config);
+
+startupLog('Registering slash commands globally...');
+await this.registerCommands();
+startupLog('Slash commands registration complete');
       
       const databaseMode = dbStatus.isDegraded
         ? 'Optional in-memory mode (data resets after restart)'
@@ -339,12 +342,13 @@ class TitanBot extends Client {
     logger.info(`\n${'='.repeat(60)}`);
     logger.info(`🛑 Graceful Shutdown Initiated (${reason})`);
     logger.info(`${'='.repeat(60)}`);
-
-    try {
-      
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
+
+      logger.info('Stopping stream notifications...');
+      stopStreamNotifications();
+      logger.info('✅ Stream notifications stopped');
 
       logger.info('Stopping music players...');
       await shutdownMusic(this);
