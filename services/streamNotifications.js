@@ -154,6 +154,9 @@ async function checkTwitch(client, config) {
 
     const stream = data.data?.[0] ?? null;
     const isLive = Boolean(stream);
+    logger.warn(
+  `Twitch check: ${twitch.username} is ${isLive ? "LIVE" : "offline"}`
+);
 
     // Offline -> Live
     if (isLive && !twitchWasLive) {
