@@ -558,7 +558,7 @@ export async function registerCommands(
                 );
 
             if (moveAllRegistered) {
-                logger.info(
+                logger.warn(
                     `✅ Discord registered /moveall successfully - ID: ${moveAllRegistered.id}`
                 );
             } else {
