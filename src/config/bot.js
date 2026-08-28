@@ -442,7 +442,34 @@ export const botConfig = {
     commandDisabled: "This command has been disabled.",
     maintenanceMode: "The bot is currently in maintenance mode.",
   },
+  streamNotifications: {
+  enabled: true,
 
+  discord: {
+    channelId: process.env.1262586420258799627,
+    roleId: process.env.1262575924755304508,
+     discord: {
+    channelId: process.env.1262586378718543915,
+    roleId: process.env.1262575884997492766,
+  },
+
+  twitch: {
+    enabled: true,
+    username: "evolution42315",
+    clientId: process.env.81hup0n9ol2xw28u8mp2fdabg1anak,
+    clientSecret: process.env.dze8r59b14ick4vd4oqrhdla2kl6bl,
+  },
+
+  tiktok: {
+    enabled: true,
+    username: "evo_gaming42315",
+  },
+
+  messages: {
+    twitch: "🔴 **{username} is LIVE on Twitch!**",
+    tiktok: "🔴 **{username} is LIVE on TikTok!**",
+  },
+},
   // =========================
   // FEATURE TOGGLES
   // =========================
