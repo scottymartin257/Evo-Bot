@@ -3,6 +3,7 @@ import { logger } from "../src/utils/logger.js";
 let twitchWasLive = false;
 let twitchAccessToken = null;
 let twitchTokenExpiresAt = 0;
+let notificationInterval = null;
 
 async function getTwitchAccessToken(clientId, clientSecret) {
   if (
@@ -83,7 +84,7 @@ async function sendTwitchLiveNotification(
 
   await channel.send({
     content:
-      `${roleMention}\n` +
+      `${roleMention ? `${roleMention}\n` : ""}` +
       `🔴 **${username} is LIVE on Twitch!**` +
       `${title}` +
       `${game}\n\n` +
@@ -178,8 +179,6 @@ async function checkTwitch(client, config) {
   }
 }
 
-let notificationInterval = null;
-
 export function startStreamNotifications(
   client,
   config
@@ -188,7 +187,7 @@ export function startStreamNotifications(
     config.bot?.streamNotifications;
 
   if (!streamConfig?.enabled) {
-    logger.info(
+    logger.warn(
       "Stream notifications are disabled."
     );
     return;
@@ -201,11 +200,11 @@ export function startStreamNotifications(
     return;
   }
 
-  logger.info(
+  logger.warn(
     "🔔 Starting stream notification service..."
   );
 
-  // Check immediately
+  // Check immediately when bot starts
   checkTwitch(client, config);
 
   // Check Twitch every 60 seconds
@@ -215,12 +214,14 @@ export function startStreamNotifications(
 }
 
 export function stopStreamNotifications() {
-  if (notificationInterval) {
-    clearInterval(notificationInterval);
-    notificationInterval = null;
-
-    logger.info(
-      "Stream notification service stopped."
-    );
+  if (!notificationInterval) {
+    return;
   }
+
+  clearInterval(notificationInterval);
+  notificationInterval = null;
+
+  logger.info(
+    "Stream notification service stopped."
+  );
 }
