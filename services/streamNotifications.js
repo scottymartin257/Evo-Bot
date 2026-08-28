@@ -97,6 +97,7 @@ async function sendTwitchLiveNotification(
 }
 
 async function checkTwitch(client, config) {
+  logger.warn("TEST: checkTwitch function started");
   const streamConfig =
     config.bot?.streamNotifications;
 
