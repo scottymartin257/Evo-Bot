@@ -504,6 +504,7 @@ export const botConfig = {
     community: true,
     fun: true,
     music: true,
+    streamNotifications: true,
   },
 };
 
