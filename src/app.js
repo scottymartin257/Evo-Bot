@@ -20,7 +20,7 @@ import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/databas
 import {
   startStreamNotifications,
   stopStreamNotifications
-} from './services/streamNotifications.js';
+} from '../services/streamNotifications.js';
 
 class TitanBot extends Client {
   constructor() {
