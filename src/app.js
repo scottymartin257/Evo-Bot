@@ -397,7 +397,7 @@ startupLog('Slash commands registration complete');
       process.exit(1);
     }
   }
-
+}
 try {
   const bot = new TitanBot();
   
