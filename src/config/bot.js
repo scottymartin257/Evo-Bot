@@ -472,10 +472,7 @@ export const botConfig = {
     tiktok: '🔴 **{username} is LIVE on TikTok!**',
   },
 },
-  },
-},
-  },
-},
+
   // =========================
   // FEATURE TOGGLES
   // =========================
