@@ -30,8 +30,8 @@ export default {
                     ChannelType.GuildVoice
                 )
                 .setRequired(true)
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers),
+        ),
+     
 
     category: "moderation",
 
