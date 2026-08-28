@@ -446,11 +446,11 @@ export const botConfig = {
   enabled: true,
 
   discord: {
-    channelId: process.env.1262586420258799627,
-    roleId: process.env.1262575924755304508,
+    channelId: '1262586420258799627',
+    roleId: '1262575924755304508',
      discord: {
-    channelId: process.env.1262586378718543915,
-    roleId: process.env.1262575884997492766,
+    channelId: '1262586378718543915',
+    roleId: '1262575884997492766',
   },
 
   twitch: {
