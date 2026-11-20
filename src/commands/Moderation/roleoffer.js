@@ -38,7 +38,6 @@ export default {
         try {
             const user = interaction.options.getUser('user');
             const role = interaction.options.getRole('role');
-            const offerId = interaction.id;
             const offeredBy = interaction.user.id;
             const guild = interaction.guild;
 
@@ -91,12 +90,12 @@ export default {
 
             const buttons = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`er:accept:${guild.id}:${role.id}:${user.id}:${offerId}:${offeredBy}`)
+                    .setCustomId(`er:accept:${guild.id}:${role.id}:${user.id}:${offeredBy}`)
                     .setLabel('Yes, Accept')
                     .setStyle(ButtonStyle.Success),
 
                 new ButtonBuilder()
-                    .setCustomId(`er:decline:${guild.id}:${role.id}:${user.id}:${offerId}:${offeredBy}`)
+                   .setCustomId(`er:decline:${guild.id}:${role.id}:${user.id}:${offeredBy}`)
                     .setLabel('No, Decline')
                     .setStyle(ButtonStyle.Danger)
             );
