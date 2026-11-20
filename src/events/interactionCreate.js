@@ -307,6 +307,10 @@ export default {
             }
           }
         } else if (interaction.isButton()) {
+          // Role offer buttons are handled by roleOfferSystem.js
+if (interaction.customId.startsWith('er:')) {
+    return;
+}
           if (interaction.customId.startsWith('shared_todo_')) {
             const parts = interaction.customId.split('_');
             const buttonType = parts.slice(0, 3).join('_');
