@@ -1,5 +1,5 @@
 ﻿import 'dotenv/config';
-import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
@@ -14,6 +14,7 @@ import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/loaders/commandLoader.js';
 import { runSafeTask, handleTaskError, ErrorCodes } from './utils/errorHandler.js';
 import { initializeMusic } from './services/music/riffySetup.js';
+import { installDmTicketBridge } from './utils/dmTicketBridge.js';
 import { shutdownMusic } from './services/music/playerHandler.js';
 import pkg from '../package.json' with { type: 'json' };
 import { EXPECTED_SCHEMA_VERSION, EXPECTED_SCHEMA_LABEL } from './config/database/schemaVersion.js';
@@ -26,7 +27,6 @@ class TitanBot extends Client {
   constructor() {
     super({
       intents: [
-        
         GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
 
@@ -39,6 +39,7 @@ class TitanBot extends Client {
 
         GatewayIntentBits.GuildBans,                    
       ],
+       partials: [Partials.Channel],
     });
 
     this.config = config;
@@ -84,11 +85,16 @@ class TitanBot extends Client {
       await loadCommands(this);
       startupLog(`Commands loaded: ${this.commands.size}`);
       
-      startupLog('Loading handlers...');
-      await this.loadHandlers();
-      startupLog('Handlers loaded');
+     startupLog('Loading handlers...');
+await this.loadHandlers();
+startupLog('Handlers loaded');
 
-      initializeMusic(this);
+// Initialize private DM ticket messaging
+startupLog('Initializing DM ticket system...');
+installDmTicketBridge(this);
+startupLog('DM ticket system initialized');
+
+initializeMusic(this);
       
      startupLog('Logging into Discord...');
 await this.login(this.config.bot.token);
