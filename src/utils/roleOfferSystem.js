@@ -14,7 +14,7 @@ export function installRoleOfferSystem(client) {
         if (!interaction.customId.startsWith('er:')) return;
 
       const parts = interaction.customId.split(':');
-if (parts.length !== 7) return;
+if (parts.length !== 6) return;
 
 const [
     ,
@@ -22,11 +22,21 @@ const [
     guildId,
     roleId,
     userId,
-    offerId,
     offeredBy
 ] = parts;
-
+        
+const offerId = interaction.message.id;
+const offerAge = Date.now() - interaction.message.createdTimestamp;
+const maxOfferAge = 7 * 24 * 60 * 60 * 1000;
+        
         if (!['accept', 'decline'].includes(action)) return;
+        
+        if (offerAge > maxOfferAge) {
+    return await interaction.reply({
+        content: 'This role invitation has expired. Please contact staff for a new invitation.',
+        flags: MessageFlags.Ephemeral
+    });
+}
 
         try {
             // Only the intended recipient can respond.
@@ -47,6 +57,13 @@ const [
                     flags: MessageFlags.Ephemeral
                 });
             }
+         // Reject invitations whose buttons have already been removed.
+if (!interaction.message.components?.length) {
+    return await interaction.reply({
+        content: 'This role invitation has already been completed.',
+        flags: MessageFlags.Ephemeral
+    });
+}
 if (
     processingOffers.has(offerId) ||
     completedOffers.has(offerId)
@@ -116,11 +133,14 @@ if (action === 'accept' && !staffStillAuthorized) {
                 result = 'Declined';
             }
 
+                     // Mark the invitation as completed.
+            completedOffers.add(offerId);
+
             // Disable both buttons after responding.
             await interaction.message.edit({
                 components: []
             });
-
+         
             const response = new EmbedBuilder()
                 .setColor(action === 'accept' ? 0x2ecc71 : 0xe74c3c)
                 .setTitle(`Role Invitation ${result}`)
@@ -184,6 +204,7 @@ if (action === 'accept' && !staffStillAuthorized) {
                     );
                 }
             }
+                       
         } catch (error) {
             console.error('Role offer interaction error:', error);
 
@@ -199,9 +220,12 @@ if (action === 'accept' && !staffStillAuthorized) {
                         flags: MessageFlags.Ephemeral
                     });
                 }
-            } catch (replyError) {
+                      } catch (replyError) {
                 console.error('Role offer reply error:', replyError);
             }
+        } finally {
+            processingOffers.delete(offerId);
         }
     });
 }
+
