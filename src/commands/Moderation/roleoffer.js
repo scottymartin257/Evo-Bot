@@ -84,7 +84,7 @@ export default {
                     'Would you like to accept this role?'
                 )
                 .setFooter({
-                    text: 'Select an option below to respond.'
+                        text: 'Select an option below to respond. This invitation expires in 7 days.'
                 })
                 .setTimestamp();
 
