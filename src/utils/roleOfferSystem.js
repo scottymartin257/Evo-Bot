@@ -6,16 +6,25 @@ import {
     EmbedBuilder,
     MessageFlags
 } from 'discord.js';
-
+const processingOffers = new Set();
+const completedOffers = new Set();
 export function installRoleOfferSystem(client) {
     client.on(Events.InteractionCreate, async interaction => {
         if (!interaction.isButton()) return;
         if (!interaction.customId.startsWith('er:')) return;
 
-        const parts = interaction.customId.split(':');
-        if (parts.length !== 5) return;
+      const parts = interaction.customId.split(':');
+if (parts.length !== 7) return;
 
-        const [, action, guildId, roleId, userId] = parts;
+const [
+    ,
+    action,
+    guildId,
+    roleId,
+    userId,
+    offerId,
+    offeredBy
+] = parts;
 
         if (!['accept', 'decline'].includes(action)) return;
 
@@ -38,13 +47,41 @@ export function installRoleOfferSystem(client) {
                     flags: MessageFlags.Ephemeral
                 });
             }
+if (
+    processingOffers.has(offerId) ||
+    completedOffers.has(offerId)
+) {
+    return await interaction.reply({
+        content: 'This role invitation is already being processed or has been completed.',
+        flags: MessageFlags.Ephemeral
+    });
+}
 
+processingOffers.add(offerId);
             await interaction.deferUpdate();
 
             const guild = await client.guilds.fetch(guildId);
             const member = await guild.members.fetch(userId);
             const role = await guild.roles.fetch(roleId);
             const bot = await guild.members.fetchMe();
+
+            // Verify the staff member who originally offered the role.
+const offeringStaff = await guild.members.fetch(offeredBy).catch(() => null);
+
+const staffStillAuthorized =
+    offeringStaff &&
+    offeringStaff.permissions.has(PermissionFlagsBits.ManageRoles) &&
+    (
+        offeringStaff.permissions.has(PermissionFlagsBits.Administrator) ||
+        (role && offeringStaff.roles.highest.comparePositionTo(role) > 0)
+    );
+
+if (action === 'accept' && !staffStillAuthorized) {
+    return await interaction.followUp({
+        content: 'This role invitation is no longer authorized. Please contact staff for a new invitation.',
+        flags: MessageFlags.Ephemeral
+    });
+}
 
             if (!role) {
                 return await interaction.followUp({
