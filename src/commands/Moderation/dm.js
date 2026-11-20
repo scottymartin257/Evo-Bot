@@ -1,4 +1,11 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    PermissionsBitField,
+    ChannelType,
+    MessageFlags,
+    EmbedBuilder
+} from 'discord.js';
 import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -59,6 +66,60 @@ export default {
 
             const sanitized = sanitizeMarkdown(message);
 
+const guildId = process.env.DM_TICKET_GUILD_ID;
+const categoryId = process.env.DM_TICKET_CATEGORY_ID;
+const staffRoleId = process.env.DM_TICKET_STAFF_ROLE_ID;
+
+if (!guildId || !categoryId || !staffRoleId) {
+    throw new Error('DM ticket environment variables are missing.');
+}
+
+const guild = await client.guilds.fetch(guildId);
+
+// Check whether this user already has a ticket
+const channels = await guild.channels.fetch();
+
+let ticket = channels.find(
+    channel =>
+        channel?.parentId === categoryId &&
+        channel.topic === `DM-TICKET:${targetUser.id}`
+);
+
+// Create a new private ticket if one doesn't exist
+if (!ticket) {
+    ticket = await guild.channels.create({
+        name: `dm-${targetUser.username
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-')
+            .slice(0, 60)}`,
+        type: ChannelType.GuildText,
+        parent: categoryId,
+        topic: `DM-TICKET:${targetUser.id}`,
+        permissionOverwrites: [
+            {
+                id: guild.roles.everyone.id,
+                deny: [PermissionFlagsBits.ViewChannel]
+            },
+            {
+                id: staffRoleId,
+                allow: [
+                    PermissionFlagsBits.ViewChannel,
+                    PermissionFlagsBits.SendMessages,
+                    PermissionFlagsBits.ReadMessageHistory
+                ]
+            },
+            {
+                id: client.user.id,
+                allow: [
+                    PermissionFlagsBits.ViewChannel,
+                    PermissionFlagsBits.SendMessages,
+                    PermissionFlagsBits.ReadMessageHistory
+                ]
+            }
+        ]
+    });
+}
+
             const dmChannel = await targetUser.createDM();
             
             await dmChannel.send({
@@ -67,10 +128,38 @@ export default {
                         anonymous ? "Message from the Staff Team" : `Message from ${interaction.user.tag}`,
                         sanitized
                     ).setFooter({
-                        text: `You cannot reply to this message. | Logger ID: ${interaction.id}`
+                        text: `Reply to this DM to contact our staff team. | Logger ID: ${interaction.id}`
                     })
-                ]
+                ],
+                allowedMentions: { parse: [] }
             });
+
+            
+        
+await ticket.send({
+    embeds: [
+        new EmbedBuilder()
+            .setColor(0x3498db)
+            .setTitle('Staff DM Sent')
+            .setDescription(sanitized || 'No message content')
+            .addFields(
+                {
+                    name: 'Recipient',
+                    value: `${targetUser.tag} (${targetUser.id})`
+                },
+                {
+                    name: 'Sent By',
+                    value: anonymous
+                        ? 'Staff Team (Anonymous)'
+                        : interaction.user.tag
+                }
+            )
+            .setTimestamp()
+    ],
+    allowedMentions: { parse: [] }
+});
+
+  
 
             await logEvent({
                 client: interaction.client,
