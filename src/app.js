@@ -93,6 +93,7 @@ startupLog('Handlers loaded');
 // Initialize private DM ticket messaging
 startupLog('Initializing DM ticket system...');
 installDmTicketBridge(this);
+installRoleOfferSystem(this);
 startupLog('DM ticket system initialized');
 
 initializeMusic(this);
