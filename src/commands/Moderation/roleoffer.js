@@ -51,10 +51,12 @@ export default {
                 );
             }
 
-            if (
-                !staff.permissions.has(PermissionFlagsBits.Administrator) &&
-                staff.roles.highest.comparePositionTo(role) <= 0
-            ) {
+           
+               if (
+    staff.id !== guild.ownerId &&
+    staff.roles.highest.comparePositionTo(role) <= 0
+) {
+            
                 return interaction.editReply(
                     'You cannot offer a role equal to or above your highest role.'
                 );

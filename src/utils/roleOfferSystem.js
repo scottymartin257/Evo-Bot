@@ -88,11 +88,11 @@ const offeringStaff = await guild.members.fetch(offeredBy).catch(() => null);
 const staffStillAuthorized =
     offeringStaff &&
     offeringStaff.permissions.has(PermissionFlagsBits.ManageRoles) &&
+    role &&
     (
-        offeringStaff.permissions.has(PermissionFlagsBits.Administrator) ||
-        (role && offeringStaff.roles.highest.comparePositionTo(role) > 0)
+        offeringStaff.id === guild.ownerId ||
+        offeringStaff.roles.highest.comparePositionTo(role) > 0
     );
-
 if (action === 'accept' && !staffStillAuthorized) {
     return await interaction.followUp({
         content: 'This role invitation is no longer authorized. Please contact staff for a new invitation.',
